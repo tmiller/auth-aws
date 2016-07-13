@@ -36,7 +36,7 @@ func main() {
 	host := os.Getenv("AD_HOST")
 
 	baseUrl := fmt.Sprintf("https://%s", host)
-	loginUrl := fmt.Sprint("%s/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices", baseUrl)
+	loginUrl := fmt.Sprintf("%s/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices", baseUrl)
 
 	cookieJar, err := cookiejar.New(nil)
 	checkError(err)
