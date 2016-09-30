@@ -13,6 +13,10 @@ import (
 
 	"github.com/yhat/scrape"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
+
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
@@ -116,7 +120,25 @@ func main() {
 	choice, err := strconv.Atoi(strings.Trim(userInput, "\n"))
 	checkError(err)
 
-	fmt.Println(saml.Attrs[attrRoleIndex].Values[choice])
+	chosenValues := strings.Split(saml.Attrs[attrRoleIndex].Values[choice], ",")
+	principalARN := chosenValues[0]
+	roleARN := chosenValues[1]
+
+	var duration int64 = 3600
+	awsSession := session.New(aws.NewConfig().WithRegion("us-east-1"))
+	stsClient := sts.New(awsSession)
+	assumeRoleInput := sts.AssumeRoleWithSAMLInput{
+		DurationSeconds: &duration,
+		PrincipalArn:    &principalARN,
+		RoleArn:         &roleARN,
+		SAMLAssertion:   &assertion,
+	}
+
+	creds, err := stsClient.AssumeRoleWithSAML(&assumeRoleInput)
+	checkError(err)
+
+	fmt.Println(creds)
+
 }
 
 func samlResponseMatcher(n *html.Node) bool {
