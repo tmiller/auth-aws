@@ -137,8 +137,6 @@ func main() {
 	creds, err := stsClient.AssumeRoleWithSAML(&assumeRoleInput)
 	checkError(err)
 
-	fmt.Println(creds)
-
 	awsCredentials := &AwsCredentials{
 		AwsAccessKeyId:     *creds.Credentials.AccessKeyId,
 		AwsSecretAccessKey: *creds.Credentials.SecretAccessKey,
