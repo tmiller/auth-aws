@@ -139,6 +139,14 @@ func main() {
 
 	fmt.Println(creds)
 
+	awsCredentials := &AwsCredentials{
+		AwsAccessKeyId:     *creds.Credentials.AccessKeyId,
+		AwsSecretAccessKey: *creds.Credentials.SecretAccessKey,
+		AwsSessionToken:    *creds.Credentials.SessionToken,
+	}
+
+	SaveAwsCredentials(awsCredentials)
+
 }
 
 func samlResponseMatcher(n *html.Node) bool {
