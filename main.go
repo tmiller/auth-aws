@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/yhat/scrape"
@@ -89,10 +91,32 @@ func main() {
 	input, ok := scrape.Find(root, samlResponseMatcher)
 	checkOk(ok, "Can't find input")
 	assertion := scrape.Attr(input, "value")
-	samlResponse, err := base64.StdEncoding.DecodeString(assertion)
+	decodedSamlResponse, err := base64.StdEncoding.DecodeString(assertion)
 	checkError(err)
 
-	fmt.Printf("%s\n", samlResponse)
+	saml, err := parseSaml(decodedSamlResponse)
+
+	attrRoleIndex := -1
+	for ai, attrs := range saml.Attrs {
+		if attrs.Name == "https://aws.amazon.com/SAML/Attributes/Role" {
+			attrRoleIndex = ai
+			for vi, val := range attrs.Values {
+				splitVal := strings.Split(val, "/")
+				role := splitVal[len(splitVal)-1]
+				fmt.Printf("[%d] %v\n", vi, role)
+			}
+		}
+	}
+	checkOk(attrRoleIndex >= 0, "Could not find role attribute")
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Select a role: ")
+	userInput, err := reader.ReadString('\n')
+	checkError(err)
+	choice, err := strconv.Atoi(strings.Trim(userInput, "\n"))
+	checkError(err)
+
+	fmt.Println(saml.Attrs[attrRoleIndex].Values[choice])
 }
 
 func samlResponseMatcher(n *html.Node) bool {
