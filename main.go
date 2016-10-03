@@ -37,11 +37,9 @@ func checkOk(ok bool, message string) {
 
 func main() {
 
-	user := os.Getenv("AD_USER")
-	pass := os.Getenv("AD_PASS")
-	host := os.Getenv("AD_HOST")
+	auth := newADFSConfig()
 
-	baseUrl := fmt.Sprintf("https://%s", host)
+	baseUrl := fmt.Sprintf("https://%s", auth.Hostname)
 	loginUrl := fmt.Sprintf("%s/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices", baseUrl)
 
 	cookieJar, err := cookiejar.New(nil)
@@ -72,9 +70,9 @@ func main() {
 		value := scrape.Attr(n, "value")
 		switch {
 		case strings.Contains(name, "Password"):
-			formData.Set(name, pass)
+			formData.Set(name, auth.Password)
 		case strings.Contains(name, "Username"):
-			formData.Set(name, user)
+			formData.Set(name, auth.Username)
 		default:
 			formData.Set(name, value)
 		}
