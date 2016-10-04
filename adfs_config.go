@@ -1,19 +1,38 @@
 package main
 
-import "os"
+import (
+	"fmt"
+	"os"
+
+	"gopkg.in/ini.v1"
+)
 
 type ADFSConfig struct {
-	Username string
-	Password string
-	Hostname string
+	Username string `ini:"user"`
+	Password string `ini:"pass"`
+	Hostname string `ini:"host"`
 }
 
 func newADFSConfig() *ADFSConfig {
-	authVars := &ADFSConfig{
-		Username: os.Getenv("AD_USER"),
-		Password: os.Getenv("AD_PASS"),
-		Hostname: os.Getenv("AD_HOST"),
+
+	configPath := fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
+	adfsConfig := new(ADFSConfig)
+
+	cfg, err := ini.Load(configPath)
+	if err == nil {
+		err = cfg.Section("adfs").MapTo(adfsConfig)
+		checkError(err)
 	}
 
-	return authVars
+	if val, ok := os.LookupEnv("ADFS_USER"); ok {
+		adfsConfig.Username = val
+	}
+	if val, ok := os.LookupEnv("ADFS_PASS"); ok {
+		adfsConfig.Password = val
+	}
+	if val, ok := os.LookupEnv("ADFS_HOST"); ok {
+		adfsConfig.Hostname = val
+	}
+
+	return adfsConfig
 }
