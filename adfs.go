@@ -39,6 +39,7 @@ func newADFSConfig() *ADFSConfig {
 		if settingsFile, err := os.Open(settingsPath); err != nil {
 			fmt.Fprintf(os.Stderr, "auth-aws: warn: could not open \"%s\" for reading\n", settingsPath)
 		} else {
+			defer settingsFile.Close()
 			loadSettingsFile(adfsConfig, settingsFile)
 		}
 	}
