@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -16,24 +18,32 @@ type ADFSConfig struct {
 	Hostname string `ini:"host"`
 }
 
-var defaultConfigPath string = fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
+var settingsPath string = fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
 
-func newADFSConfig(configPath string) *ADFSConfig {
+func loadSettingsFile(adfsConfig *ADFSConfig, settingsFile io.Reader) {
+	b, err := ioutil.ReadAll(settingsFile)
+	checkError(err)
 
-	if configPath == "" {
-		configPath = fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
-	}
-
-	adfsConfig := new(ADFSConfig)
-
-	cfg, err := ini.Load(configPath)
+	cfg, err := ini.Load(b)
 	if err == nil {
 		err = cfg.Section("adfs").MapTo(adfsConfig)
 		checkError(err)
 	}
+}
+
+func newADFSConfig() *ADFSConfig {
+
+	adfsConfig := new(ADFSConfig)
+
+	if settingsPath != "" {
+		if settingsFile, err := os.Open(settingsPath); err != nil {
+			fmt.Printf("auth-aws: warn: could not open \"%s\" for reading\n", settingsPath)
+		} else {
+			loadSettingsFile(adfsConfig, settingsFile)
+		}
+	}
 
 	reader := bufio.NewReader(os.Stdin)
-
 	if val, ok := os.LookupEnv("ADFS_USER"); ok {
 		adfsConfig.Username = val
 	} else if adfsConfig.Username == "" {

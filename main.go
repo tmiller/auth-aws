@@ -23,7 +23,7 @@ import (
 
 func main() {
 
-	auth := newADFSConfig("")
+	auth := newADFSConfig()
 
 	baseUrl := fmt.Sprintf("https://%s", auth.Hostname)
 	loginUrl := fmt.Sprintf("%s/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices", baseUrl)
