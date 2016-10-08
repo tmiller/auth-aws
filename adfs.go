@@ -31,6 +31,18 @@ func loadSettingsFile(adfsConfig *ADFSConfig, settingsFile io.Reader) {
 	}
 }
 
+func loadEnvVars(adfsConfig *ADFSConfig) {
+	if val, ok := os.LookupEnv("ADFS_USER"); ok {
+		adfsConfig.Username = val
+	}
+	if val, ok := os.LookupEnv("ADFS_PASS"); ok {
+		adfsConfig.Password = val
+	}
+	if val, ok := os.LookupEnv("ADFS_HOST"); ok {
+		adfsConfig.Hostname = val
+	}
+}
+
 func newADFSConfig() *ADFSConfig {
 
 	adfsConfig := new(ADFSConfig)
@@ -44,26 +56,22 @@ func newADFSConfig() *ADFSConfig {
 		}
 	}
 
+	loadEnvVars(adfsConfig)
+
 	reader := bufio.NewReader(os.Stdin)
-	if val, ok := os.LookupEnv("ADFS_USER"); ok {
-		adfsConfig.Username = val
-	} else if adfsConfig.Username == "" {
+	if adfsConfig.Username == "" {
 		fmt.Printf("Username: ")
 		user, err := reader.ReadString('\n')
 		checkError(err)
 		adfsConfig.Username = strings.Trim(user, "\n")
 	}
-	if val, ok := os.LookupEnv("ADFS_PASS"); ok {
-		adfsConfig.Password = val
-	} else if adfsConfig.Password == "" {
+	if adfsConfig.Password == "" {
 		fmt.Printf("Password: ")
 		pass, err := gopass.GetPasswd()
 		checkError(err)
 		adfsConfig.Password = string(pass[:])
 	}
-	if val, ok := os.LookupEnv("ADFS_HOST"); ok {
-		adfsConfig.Hostname = val
-	} else if adfsConfig.Hostname == "" {
+	if adfsConfig.Hostname == "" {
 		fmt.Printf("Hostname: ")
 		host, err := reader.ReadString('\n')
 		checkError(err)

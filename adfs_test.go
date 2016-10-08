@@ -2,16 +2,23 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
 
-func TestLoadSettingsFile(t *testing.T) {
-	expected := &ADFSConfig{
-		Username: "foo",
-		Password: "bar",
-		Hostname: "adfs.test",
+func compareADFSConfg(t *testing.T, expected *ADFSConfig, actual *ADFSConfig) {
+	if *expected != *actual {
+		t.Errorf(
+			"\nexp: %v\nact: %v",
+			expected,
+			actual,
+		)
 	}
+}
+
+func TestLoadSettingsFile(t *testing.T) {
+	expected := &ADFSConfig{"foo", "bar", "adfs.test"}
 
 	settingsFile := strings.NewReader(
 		fmt.Sprintf(
@@ -25,13 +32,18 @@ func TestLoadSettingsFile(t *testing.T) {
 	actual := new(ADFSConfig)
 
 	loadSettingsFile(actual, settingsFile)
+	compareADFSConfg(t, expected, actual)
+}
 
-	if *expected != *actual {
-		t.Errorf(
-			"\nexp: %v\nact: %v",
-			expected,
-			actual,
-		)
-	}
+func TestLoadEnvVars(t *testing.T) {
+	expected := &ADFSConfig{"foo", "bar", "adfs.test"}
 
+	os.Setenv("ADFS_USER", "foo")
+	os.Setenv("ADFS_PASS", "bar")
+	os.Setenv("ADFS_HOST", "adfs.test")
+
+	actual := new(ADFSConfig)
+	loadEnvVars(actual)
+
+	compareADFSConfg(t, expected, actual)
 }
