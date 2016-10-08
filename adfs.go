@@ -18,7 +18,7 @@ type ADFSConfig struct {
 	Hostname string `ini:"host"`
 }
 
-var settingsPath string = fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
+var settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
 
 func loadSettingsFile(adfsConfig *ADFSConfig, settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
