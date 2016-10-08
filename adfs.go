@@ -16,9 +16,14 @@ type ADFSConfig struct {
 	Hostname string `ini:"host"`
 }
 
-func newADFSConfig() *ADFSConfig {
+var defaultConfigPath string = fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
 
-	configPath := fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
+func newADFSConfig(configPath string) *ADFSConfig {
+
+	if configPath == "" {
+		configPath = fmt.Sprintf("%s/.config/auth-aws/config.ini", os.Getenv("HOME"))
+	}
+
 	adfsConfig := new(ADFSConfig)
 
 	cfg, err := ini.Load(configPath)
