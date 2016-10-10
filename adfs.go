@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/howeyc/gopass"
+
 	"gopkg.in/ini.v1"
 )
 
@@ -18,7 +19,9 @@ type ADFSConfig struct {
 	Hostname string `ini:"host"`
 }
 
-var settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
+var (
+	settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
+)
 
 func loadSettingsFile(adfsConfig *ADFSConfig, settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
@@ -43,22 +46,9 @@ func loadEnvVars(adfsConfig *ADFSConfig) {
 	}
 }
 
-func newADFSConfig() *ADFSConfig {
-
-	adfsConfig := new(ADFSConfig)
-
-	if settingsPath != "" {
-		if settingsFile, err := os.Open(settingsPath); err != nil {
-			fmt.Fprintf(os.Stderr, "auth-aws: warn: could not open \"%s\" for reading\n", settingsPath)
-		} else {
-			defer settingsFile.Close()
-			loadSettingsFile(adfsConfig, settingsFile)
-		}
-	}
-
-	loadEnvVars(adfsConfig)
-
+func loadAskVars(adfsConfig *ADFSConfig) {
 	reader := bufio.NewReader(os.Stdin)
+
 	if adfsConfig.Username == "" {
 		fmt.Printf("Username: ")
 		user, err := reader.ReadString('\n')
@@ -77,6 +67,23 @@ func newADFSConfig() *ADFSConfig {
 		checkError(err)
 		adfsConfig.Hostname = strings.Trim(host, "\n")
 	}
+}
+
+func newADFSConfig() *ADFSConfig {
+
+	adfsConfig := new(ADFSConfig)
+
+	if settingsPath != "" {
+		if settingsFile, err := os.Open(settingsPath); err != nil {
+			fmt.Fprintf(os.Stderr, "auth-aws: warn: could not open \"%s\" for reading\n", settingsPath)
+		} else {
+			defer settingsFile.Close()
+			loadSettingsFile(adfsConfig, settingsFile)
+		}
+	}
+
+	loadEnvVars(adfsConfig)
+	loadAskVars(adfsConfig)
 
 	return adfsConfig
 }
