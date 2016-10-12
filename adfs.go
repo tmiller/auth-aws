@@ -29,6 +29,25 @@ var (
 	settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
 )
 
+func newAdfsClient() *AdfsClient {
+
+	client := new(AdfsClient)
+
+	if settingsFile, err := os.Open(settingsPath); err == nil {
+		defer settingsFile.Close()
+		client.loadSettingsFile(settingsFile)
+	}
+
+	client.loadEnvVars()
+	client.loadAskVars()
+
+	if !strings.HasPrefix(client.Hostname, "https://") {
+		client.Hostname = "https://" + client.Hostname
+	}
+
+	return client
+}
+
 func (ac *AdfsClient) loadSettingsFile(settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
 	checkError(err)
@@ -73,25 +92,6 @@ func (ac *AdfsClient) loadAskVars() {
 		checkError(err)
 		ac.Hostname = strings.Trim(host, "\n")
 	}
-}
-
-func newAdfsClient() *AdfsClient {
-
-	client := new(AdfsClient)
-
-	if settingsFile, err := os.Open(settingsPath); err == nil {
-		defer settingsFile.Close()
-		client.loadSettingsFile(settingsFile)
-	}
-
-	client.loadEnvVars()
-	client.loadAskVars()
-
-	if !strings.HasPrefix(client.Hostname, "https://") {
-		client.Hostname = "https://" + client.Hostname
-	}
-
-	return client
 }
 
 func (ac AdfsClient) login() (*http.Response, error) {
