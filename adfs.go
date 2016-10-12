@@ -19,7 +19,7 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-type ADFSConfig struct {
+type AdfsClient struct {
 	Username string `ini:"user"`
 	Password string `ini:"pass"`
 	Hostname string `ini:"host"`
@@ -29,7 +29,7 @@ var (
 	settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
 )
 
-func loadSettingsFile(adfsConfig *ADFSConfig, settingsFile io.Reader) {
+func loadSettingsFile(adfsConfig *AdfsClient, settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
 	checkError(err)
 
@@ -40,7 +40,7 @@ func loadSettingsFile(adfsConfig *ADFSConfig, settingsFile io.Reader) {
 	}
 }
 
-func loadEnvVars(adfsConfig *ADFSConfig) {
+func loadEnvVars(adfsConfig *AdfsClient) {
 	if val, ok := os.LookupEnv("ADFS_USER"); ok {
 		adfsConfig.Username = val
 	}
@@ -52,7 +52,7 @@ func loadEnvVars(adfsConfig *ADFSConfig) {
 	}
 }
 
-func loadAskVars(adfsConfig *ADFSConfig) {
+func loadAskVars(adfsConfig *AdfsClient) {
 	reader := bufio.NewReader(os.Stdin)
 
 	if adfsConfig.Username == "" {
@@ -75,9 +75,9 @@ func loadAskVars(adfsConfig *ADFSConfig) {
 	}
 }
 
-func newADFSConfig() *ADFSConfig {
+func newAdfsClient() *AdfsClient {
 
-	adfsConfig := new(ADFSConfig)
+	adfsConfig := new(AdfsClient)
 
 	if settingsPath != "" {
 		if settingsFile, err := os.Open(settingsPath); err == nil {
@@ -96,7 +96,7 @@ func newADFSConfig() *ADFSConfig {
 	return adfsConfig
 }
 
-func (auth ADFSConfig) login() (*http.Response, error) {
+func (auth AdfsClient) login() (*http.Response, error) {
 	loginUrl := auth.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
 
 	cookieJar, err := cookiejar.New(nil)

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func compareADFSConfg(t *testing.T, expected *ADFSConfig, actual *ADFSConfig) {
+func compareADFSConfg(t *testing.T, expected *AdfsClient, actual *AdfsClient) {
 	if *expected != *actual {
 		t.Errorf(
 			"\nexp: %v\nact: %v",
@@ -57,7 +57,7 @@ func compareADFSConfg(t *testing.T, expected *ADFSConfig, actual *ADFSConfig) {
 //}
 
 func TestLoadSettingsFile(t *testing.T) {
-	expected := &ADFSConfig{"foo", "bar", "adfs.test"}
+	expected := &AdfsClient{"foo", "bar", "adfs.test"}
 
 	settingsFile := strings.NewReader(
 		fmt.Sprintf(
@@ -68,20 +68,20 @@ func TestLoadSettingsFile(t *testing.T) {
 		),
 	)
 
-	actual := new(ADFSConfig)
+	actual := new(AdfsClient)
 
 	loadSettingsFile(actual, settingsFile)
 	compareADFSConfg(t, expected, actual)
 }
 
 func TestLoadEnvVars(t *testing.T) {
-	expected := &ADFSConfig{"foo", "bar", "adfs.test"}
+	expected := &AdfsClient{"foo", "bar", "adfs.test"}
 
 	os.Setenv("ADFS_USER", "foo")
 	os.Setenv("ADFS_PASS", "bar")
 	os.Setenv("ADFS_HOST", "adfs.test")
 
-	actual := new(ADFSConfig)
+	actual := new(AdfsClient)
 	loadEnvVars(actual)
 
 	compareADFSConfg(t, expected, actual)
@@ -90,9 +90,9 @@ func TestLoadEnvVars(t *testing.T) {
 // func TestLoadAskVars(t *testing.T) {
 //
 // 	expOut := "Username: Password: Hostname: "
-// 	expected := &ADFSConfig{"foo", "bar", "adfs.test"}
+// 	expected := &AdfsClient{"foo", "bar", "adfs.test"}
 //
-// 	actual := new(ADFSConfig)
+// 	actual := new(AdfsClient)
 //
 // 	input := "foo\nbar\nadfs.test\n"
 // 	actOut := captureStdinStdout(t, input, func() {
