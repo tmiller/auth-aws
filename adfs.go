@@ -79,11 +79,9 @@ func newAdfsClient() *AdfsClient {
 
 	client := new(AdfsClient)
 
-	if settingsPath != "" {
-		if settingsFile, err := os.Open(settingsPath); err == nil {
-			defer settingsFile.Close()
-			client.loadSettingsFile(settingsFile)
-		}
+	if settingsFile, err := os.Open(settingsPath); err == nil {
+		defer settingsFile.Close()
+		client.loadSettingsFile(settingsFile)
 	}
 
 	client.loadEnvVars()
