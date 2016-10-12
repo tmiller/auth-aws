@@ -70,7 +70,7 @@ func TestLoadSettingsFile(t *testing.T) {
 
 	actual := new(AdfsClient)
 
-	loadSettingsFile(actual, settingsFile)
+	actual.loadSettingsFile(settingsFile)
 	compareADFSConfg(t, expected, actual)
 }
 
@@ -82,7 +82,7 @@ func TestLoadEnvVars(t *testing.T) {
 	os.Setenv("ADFS_HOST", "adfs.test")
 
 	actual := new(AdfsClient)
-	loadEnvVars(actual)
+	actual.loadEnvVars()
 
 	compareADFSConfg(t, expected, actual)
 }

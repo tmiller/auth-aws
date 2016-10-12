@@ -29,7 +29,7 @@ var (
 	settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
 )
 
-func loadSettingsFile(ac *AdfsClient, settingsFile io.Reader) {
+func (ac *AdfsClient) loadSettingsFile(settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
 	checkError(err)
 
@@ -40,7 +40,7 @@ func loadSettingsFile(ac *AdfsClient, settingsFile io.Reader) {
 	}
 }
 
-func loadEnvVars(ac *AdfsClient) {
+func (ac *AdfsClient) loadEnvVars() {
 	if val, ok := os.LookupEnv("ADFS_USER"); ok {
 		ac.Username = val
 	}
@@ -52,7 +52,7 @@ func loadEnvVars(ac *AdfsClient) {
 	}
 }
 
-func loadAskVars(ac *AdfsClient) {
+func (ac *AdfsClient) loadAskVars() {
 	reader := bufio.NewReader(os.Stdin)
 
 	if ac.Username == "" {
@@ -82,12 +82,12 @@ func newAdfsClient() *AdfsClient {
 	if settingsPath != "" {
 		if settingsFile, err := os.Open(settingsPath); err == nil {
 			defer settingsFile.Close()
-			loadSettingsFile(client, settingsFile)
+			client.loadSettingsFile(settingsFile)
 		}
 	}
 
-	loadEnvVars(client)
-	loadAskVars(client)
+	client.loadEnvVars()
+	client.loadAskVars()
 
 	if !strings.HasPrefix(client.Hostname, "https://") {
 		client.Hostname = "https://" + client.Hostname
