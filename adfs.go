@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"os"
 	"strings"
 
+	"golang.org/x/net/html"
+
 	"github.com/howeyc/gopass"
+	"github.com/yhat/scrape"
 
 	"gopkg.in/ini.v1"
 )
@@ -83,5 +89,57 @@ func newADFSConfig() *ADFSConfig {
 	loadEnvVars(adfsConfig)
 	loadAskVars(adfsConfig)
 
+	if !strings.HasPrefix(adfsConfig.Hostname, "https://") {
+		adfsConfig.Hostname = "https://" + adfsConfig.Hostname
+	}
+
 	return adfsConfig
+}
+
+func (auth ADFSConfig) login() (*http.Response, error) {
+	loginUrl := auth.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
+
+	cookieJar, err := cookiejar.New(nil)
+	checkError(err)
+
+	client := &http.Client{
+		Jar: cookieJar,
+	}
+
+	req, err := http.NewRequest("GET", loginUrl, nil)
+	checkError(err)
+
+	resp, err := client.Do(req)
+	checkError(err)
+	defer resp.Body.Close()
+
+	root, err := html.Parse(resp.Body)
+	checkError(err)
+
+	inputs := scrape.FindAll(root, inputMatcher)
+	form, ok := scrape.Find(root, FormMatcher)
+	checkOk(ok, "Can't find form")
+
+	formData := url.Values{}
+
+	for _, n := range inputs {
+		name := scrape.Attr(n, "name")
+		value := scrape.Attr(n, "value")
+		switch {
+		case strings.Contains(name, "Password"):
+			formData.Set(name, auth.Password)
+		case strings.Contains(name, "Username"):
+			formData.Set(name, auth.Username)
+		default:
+			formData.Set(name, value)
+		}
+	}
+
+	action := auth.Hostname + scrape.Attr(form, "action")
+	req, err = http.NewRequest("POST", action, strings.NewReader(formData.Encode()))
+	checkError(err)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err = client.Do(req)
+	return resp, err
 }
