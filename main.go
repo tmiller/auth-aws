@@ -20,9 +20,9 @@ import (
 
 func main() {
 
-	auth := newADFSConfig()
+	adfsClient := newAdfsClient()
 
-	resp, err := auth.login()
+	resp, err := adfsClient.login()
 	checkError(err)
 	defer resp.Body.Close()
 

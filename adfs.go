@@ -29,75 +29,75 @@ var (
 	settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
 )
 
-func loadSettingsFile(adfsConfig *AdfsClient, settingsFile io.Reader) {
+func loadSettingsFile(ac *AdfsClient, settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
 	checkError(err)
 
 	cfg, err := ini.Load(b)
 	if err == nil {
-		err = cfg.Section("adfs").MapTo(adfsConfig)
+		err = cfg.Section("adfs").MapTo(ac)
 		checkError(err)
 	}
 }
 
-func loadEnvVars(adfsConfig *AdfsClient) {
+func loadEnvVars(ac *AdfsClient) {
 	if val, ok := os.LookupEnv("ADFS_USER"); ok {
-		adfsConfig.Username = val
+		ac.Username = val
 	}
 	if val, ok := os.LookupEnv("ADFS_PASS"); ok {
-		adfsConfig.Password = val
+		ac.Password = val
 	}
 	if val, ok := os.LookupEnv("ADFS_HOST"); ok {
-		adfsConfig.Hostname = val
+		ac.Hostname = val
 	}
 }
 
-func loadAskVars(adfsConfig *AdfsClient) {
+func loadAskVars(ac *AdfsClient) {
 	reader := bufio.NewReader(os.Stdin)
 
-	if adfsConfig.Username == "" {
+	if ac.Username == "" {
 		fmt.Printf("Username: ")
 		user, err := reader.ReadString('\n')
 		checkError(err)
-		adfsConfig.Username = strings.Trim(user, "\n")
+		ac.Username = strings.Trim(user, "\n")
 	}
-	if adfsConfig.Password == "" {
+	if ac.Password == "" {
 		fmt.Printf("Password: ")
 		pass, err := gopass.GetPasswd()
 		checkError(err)
-		adfsConfig.Password = string(pass[:])
+		ac.Password = string(pass[:])
 	}
-	if adfsConfig.Hostname == "" {
+	if ac.Hostname == "" {
 		fmt.Printf("Hostname: ")
 		host, err := reader.ReadString('\n')
 		checkError(err)
-		adfsConfig.Hostname = strings.Trim(host, "\n")
+		ac.Hostname = strings.Trim(host, "\n")
 	}
 }
 
 func newAdfsClient() *AdfsClient {
 
-	adfsConfig := new(AdfsClient)
+	client := new(AdfsClient)
 
 	if settingsPath != "" {
 		if settingsFile, err := os.Open(settingsPath); err == nil {
 			defer settingsFile.Close()
-			loadSettingsFile(adfsConfig, settingsFile)
+			loadSettingsFile(client, settingsFile)
 		}
 	}
 
-	loadEnvVars(adfsConfig)
-	loadAskVars(adfsConfig)
+	loadEnvVars(client)
+	loadAskVars(client)
 
-	if !strings.HasPrefix(adfsConfig.Hostname, "https://") {
-		adfsConfig.Hostname = "https://" + adfsConfig.Hostname
+	if !strings.HasPrefix(client.Hostname, "https://") {
+		client.Hostname = "https://" + client.Hostname
 	}
 
-	return adfsConfig
+	return client
 }
 
-func (auth AdfsClient) login() (*http.Response, error) {
-	loginUrl := auth.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
+func (ac AdfsClient) login() (*http.Response, error) {
+	loginUrl := ac.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
 
 	cookieJar, err := cookiejar.New(nil)
 	checkError(err)
@@ -127,15 +127,15 @@ func (auth AdfsClient) login() (*http.Response, error) {
 		value := scrape.Attr(n, "value")
 		switch {
 		case strings.Contains(name, "Password"):
-			formData.Set(name, auth.Password)
+			formData.Set(name, ac.Password)
 		case strings.Contains(name, "Username"):
-			formData.Set(name, auth.Username)
+			formData.Set(name, ac.Username)
 		default:
 			formData.Set(name, value)
 		}
 	}
 
-	action := auth.Hostname + scrape.Attr(form, "action")
+	action := ac.Hostname + scrape.Attr(form, "action")
 	req, err = http.NewRequest("POST", action, strings.NewReader(formData.Encode()))
 	checkError(err)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
