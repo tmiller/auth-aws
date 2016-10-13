@@ -22,17 +22,9 @@ func main() {
 
 	adfsClient := newAdfsClient()
 
-	resp, err := adfsClient.login()
-	checkError(err)
-	defer resp.Body.Close()
+	samlAssertion := adfsClient.login()
 
-	root, err := html.Parse(resp.Body)
-	checkError(err)
-
-	input, ok := scrape.Find(root, samlResponseMatcher)
-	checkOk(ok, "Can't find input")
-	assertion := scrape.Attr(input, "value")
-	decodedSamlResponse, err := base64.StdEncoding.DecodeString(assertion)
+	decodedSamlResponse, err := base64.StdEncoding.DecodeString(samlAssertion)
 	checkError(err)
 
 	saml, err := parseSaml(decodedSamlResponse)
@@ -68,7 +60,7 @@ func main() {
 		DurationSeconds: &duration,
 		PrincipalArn:    &principalARN,
 		RoleArn:         &roleARN,
-		SAMLAssertion:   &assertion,
+		SAMLAssertion:   &samlAssertion,
 	}
 
 	creds, err := stsClient.AssumeRoleWithSAML(&assumeRoleInput)

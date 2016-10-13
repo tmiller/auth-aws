@@ -109,7 +109,7 @@ func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
 
 	inputs := scrape.FindAll(root, inputMatcher)
 	form, ok := scrape.Find(root, formMatcher)
-	checkOk(ok, "Can't find form")
+	checkOk(ok, "Can't find login form")
 
 	formData := url.Values{}
 
@@ -131,7 +131,17 @@ func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
 	return action, formData
 }
 
-func (ac AdfsClient) login() (*http.Response, error) {
+func (ac AdfsClient) scrapeSamlResponse(r io.Reader) string {
+	root, err := html.Parse(r)
+	checkError(err)
+
+	input, ok := scrape.Find(root, samlResponseMatcher)
+	checkOk(ok, "Can't find saml response")
+
+	return scrape.Attr(input, "value")
+}
+
+func (ac AdfsClient) login() string {
 	loginUrl := ac.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
 
 	cookieJar, err := cookiejar.New(nil)
@@ -155,5 +165,7 @@ func (ac AdfsClient) login() (*http.Response, error) {
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err = client.Do(req)
-	return resp, err
+	defer resp.Body.Close()
+
+	return ac.scrapeSamlResponse(resp.Body)
 }
