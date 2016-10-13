@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
-	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -23,63 +20,11 @@ import (
 
 func main() {
 
-	auth := newADFSConfig()
+	adfsClient := newAdfsClient()
 
-	baseUrl := fmt.Sprintf("https://%s", auth.Hostname)
-	loginUrl := fmt.Sprintf("%s/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices", baseUrl)
+	samlAssertion := adfsClient.login()
 
-	cookieJar, err := cookiejar.New(nil)
-	checkError(err)
-
-	client := &http.Client{
-		Jar: cookieJar,
-	}
-
-	req, err := http.NewRequest("GET", loginUrl, nil)
-	checkError(err)
-
-	resp, err := client.Do(req)
-	checkError(err)
-	defer resp.Body.Close()
-
-	root, err := html.Parse(resp.Body)
-	checkError(err)
-
-	inputs := scrape.FindAll(root, inputMatcher)
-	form, ok := scrape.Find(root, FormMatcher)
-	checkOk(ok, "Can't find form")
-
-	formData := url.Values{}
-
-	for _, n := range inputs {
-		name := scrape.Attr(n, "name")
-		value := scrape.Attr(n, "value")
-		switch {
-		case strings.Contains(name, "Password"):
-			formData.Set(name, auth.Password)
-		case strings.Contains(name, "Username"):
-			formData.Set(name, auth.Username)
-		default:
-			formData.Set(name, value)
-		}
-	}
-
-	action := fmt.Sprint(baseUrl, scrape.Attr(form, "action"))
-	req, err = http.NewRequest("POST", action, strings.NewReader(formData.Encode()))
-	checkError(err)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err = client.Do(req)
-	checkError(err)
-	defer resp.Body.Close()
-
-	root, err = html.Parse(resp.Body)
-	checkError(err)
-
-	input, ok := scrape.Find(root, samlResponseMatcher)
-	checkOk(ok, "Can't find input")
-	assertion := scrape.Attr(input, "value")
-	decodedSamlResponse, err := base64.StdEncoding.DecodeString(assertion)
+	decodedSamlResponse, err := base64.StdEncoding.DecodeString(samlAssertion)
 	checkError(err)
 
 	saml, err := parseSaml(decodedSamlResponse)
@@ -115,7 +60,7 @@ func main() {
 		DurationSeconds: &duration,
 		PrincipalArn:    &principalARN,
 		RoleArn:         &roleARN,
-		SAMLAssertion:   &assertion,
+		SAMLAssertion:   &samlAssertion,
 	}
 
 	creds, err := stsClient.AssumeRoleWithSAML(&assumeRoleInput)
@@ -133,12 +78,4 @@ func main() {
 
 func samlResponseMatcher(n *html.Node) bool {
 	return n.DataAtom == atom.Input && scrape.Attr(n, "name") == "SAMLResponse"
-}
-
-func inputMatcher(n *html.Node) bool {
-	return n.DataAtom == atom.Input
-}
-
-func FormMatcher(n *html.Node) bool {
-	return n.DataAtom == atom.Form
 }
