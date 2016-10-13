@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/howeyc/gopass"
 	"github.com/yhat/scrape"
@@ -28,6 +29,14 @@ type AdfsClient struct {
 var (
 	settingsPath string = os.Getenv("HOME") + "/.config/auth-aws/config.ini"
 )
+
+func inputMatcher(n *html.Node) bool {
+	return n.DataAtom == atom.Input
+}
+
+func formMatcher(n *html.Node) bool {
+	return n.DataAtom == atom.Form
+}
 
 func newAdfsClient() *AdfsClient {
 
@@ -94,28 +103,12 @@ func (ac *AdfsClient) loadAskVars() {
 	}
 }
 
-func (ac AdfsClient) login() (*http.Response, error) {
-	loginUrl := ac.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
-
-	cookieJar, err := cookiejar.New(nil)
-	checkError(err)
-
-	client := &http.Client{
-		Jar: cookieJar,
-	}
-
-	req, err := http.NewRequest("GET", loginUrl, nil)
-	checkError(err)
-
-	resp, err := client.Do(req)
-	checkError(err)
-	defer resp.Body.Close()
-
-	root, err := html.Parse(resp.Body)
+func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
+	root, err := html.Parse(r)
 	checkError(err)
 
 	inputs := scrape.FindAll(root, inputMatcher)
-	form, ok := scrape.Find(root, FormMatcher)
+	form, ok := scrape.Find(root, formMatcher)
 	checkOk(ok, "Can't find form")
 
 	formData := url.Values{}
@@ -134,6 +127,29 @@ func (ac AdfsClient) login() (*http.Response, error) {
 	}
 
 	action := ac.Hostname + scrape.Attr(form, "action")
+
+	return action, formData
+}
+
+func (ac AdfsClient) login() (*http.Response, error) {
+	loginUrl := ac.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
+
+	cookieJar, err := cookiejar.New(nil)
+	checkError(err)
+
+	client := &http.Client{
+		Jar: cookieJar,
+	}
+
+	req, err := http.NewRequest("GET", loginUrl, nil)
+	checkError(err)
+
+	resp, err := client.Do(req)
+	checkError(err)
+	defer resp.Body.Close()
+
+	action, formData := ac.scrapeLoginPage(resp.Body)
+
 	req, err = http.NewRequest("POST", action, strings.NewReader(formData.Encode()))
 	checkError(err)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")

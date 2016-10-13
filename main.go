@@ -87,11 +87,3 @@ func main() {
 func samlResponseMatcher(n *html.Node) bool {
 	return n.DataAtom == atom.Input && scrape.Attr(n, "name") == "SAMLResponse"
 }
-
-func inputMatcher(n *html.Node) bool {
-	return n.DataAtom == atom.Input
-}
-
-func FormMatcher(n *html.Node) bool {
-	return n.DataAtom == atom.Form
-}

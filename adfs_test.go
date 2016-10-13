@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -46,4 +48,43 @@ func TestLoadEnvVars(t *testing.T) {
 	actual.loadEnvVars()
 
 	compareADFSConfg(t, expected, actual)
+}
+
+func TestScrapeLoginPage(t *testing.T) {
+	client := &AdfsClient{"foo", "bar", "adfs.test"}
+
+	f, err := os.Open("testdata/login_page.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	expUrlValues := url.Values{
+		"__VIEWSTATE":          []string{"viewstatedata"},
+		"__VIEWSTATEGENERATOR": []string{"viewstategeneratordata"},
+		"__EVENTVALIDATION":    []string{"eventvalidationdata"},
+		"__db":                 []string{"15"},
+		"ctl00$ContentPlaceHolder1$UsernameTextBox": []string{"foo"},
+		"ctl00$ContentPlaceHolder1$PasswordTextBox": []string{"bar"},
+		"ctl00$ContentPlaceHolder1$SubmitButton":    []string{"Sign In"},
+	}
+
+	expFormAction := client.Hostname + "/adfs/ls/?SAMLRequest=REQUEST"
+	actFormAction, actUrlValues := client.scrapeLoginPage(f)
+
+	if expFormAction != actFormAction {
+		t.Errorf(
+			"Form actions do not match \nexp: %s\nact:%s",
+			expFormAction,
+			actFormAction,
+		)
+	}
+
+	if !reflect.DeepEqual(expUrlValues, actUrlValues) {
+		t.Errorf(
+			"Url values do not match \nexp: %s\nact: %s",
+			expUrlValues,
+			actUrlValues,
+		)
+	}
 }
