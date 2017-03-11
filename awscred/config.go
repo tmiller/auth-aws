@@ -1,4 +1,4 @@
-package main
+package awscred
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 
 var credPath string = fmt.Sprintf("%s/.aws/credentials", os.Getenv("HOME"))
 
-func SaveAwsCredentials(awsCredentials *AwsCredentials) {
+func (awsCredentials *Credentials) Write() {
 
 	creds, err := ini.Load(credPath)
 	if err != nil {
@@ -35,7 +35,7 @@ func SaveAwsCredentials(awsCredentials *AwsCredentials) {
 	creds.SaveTo(credPath)
 }
 
-type AwsCredentials struct {
+type Credentials struct {
 	AwsAccessKeyId     string
 	AwsSecretAccessKey string
 	AwsSessionToken    string

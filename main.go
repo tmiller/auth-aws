@@ -8,6 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tmiller/auth-aws/awscred"
+	"github.com/tmiller/auth-aws/errors"
+	"github.com/tmiller/auth-aws/idp"
+	"github.com/tmiller/auth-aws/saml"
+
 	"github.com/yhat/scrape"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,14 +25,14 @@ import (
 
 func main() {
 
-	adfsClient := newAdfsClient()
+	adfsClient := idp.NewAdfsClient()
 
-	samlAssertion := adfsClient.login()
+	samlAssertion := adfsClient.Login()
 
 	decodedSamlResponse, err := base64.StdEncoding.DecodeString(samlAssertion)
-	checkError(err)
+	errors.CheckError(err)
 
-	saml, err := parseSaml(decodedSamlResponse)
+	saml, err := saml.Parse(decodedSamlResponse)
 
 	attrRoleIndex := -1
 	for ai, attrs := range saml.Attrs {
@@ -40,14 +45,14 @@ func main() {
 			}
 		}
 	}
-	checkOk(attrRoleIndex >= 0, "Could not find role attribute")
+	errors.CheckOk(attrRoleIndex >= 0, "Could not find role attribute")
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Select a role: ")
 	userInput, err := reader.ReadString('\n')
-	checkError(err)
+	errors.CheckError(err)
 	choice, err := strconv.Atoi(strings.Trim(userInput, "\n"))
-	checkError(err)
+	errors.CheckError(err)
 
 	chosenValues := strings.Split(saml.Attrs[attrRoleIndex].Values[choice], ",")
 	principalARN := chosenValues[0]
@@ -64,15 +69,15 @@ func main() {
 	}
 
 	creds, err := stsClient.AssumeRoleWithSAML(&assumeRoleInput)
-	checkError(err)
+	errors.CheckError(err)
 
-	awsCredentials := &AwsCredentials{
+	awsCredentials := &awscred.Credentials{
 		AwsAccessKeyId:     *creds.Credentials.AccessKeyId,
 		AwsSecretAccessKey: *creds.Credentials.SecretAccessKey,
 		AwsSessionToken:    *creds.Credentials.SessionToken,
 	}
 
-	SaveAwsCredentials(awsCredentials)
+	awsCredentials.Write()
 
 }
 

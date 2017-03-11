@@ -1,4 +1,4 @@
-package main
+package saml
 
 import "encoding/xml"
 
@@ -12,7 +12,7 @@ type Attribute struct {
 	Values []string `xml:"AttributeValue"`
 }
 
-func parseSaml(decodedSamlResponse []byte) (samlResponse SamlResponse, err error) {
+func Parse(decodedSamlResponse []byte) (samlResponse SamlResponse, err error) {
 	err = xml.Unmarshal(decodedSamlResponse, &samlResponse)
 	return
 }

@@ -1,4 +1,4 @@
-package main
+package idp
 
 import (
 	"bufio"
@@ -13,6 +13,8 @@ import (
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+
+	"github.com/tmiller/auth-aws/errors"
 
 	"github.com/howeyc/gopass"
 	"github.com/yhat/scrape"
@@ -38,7 +40,7 @@ func formMatcher(n *html.Node) bool {
 	return n.DataAtom == atom.Form
 }
 
-func newAdfsClient() *AdfsClient {
+func NewAdfsClient() *AdfsClient {
 
 	client := new(AdfsClient)
 
@@ -59,12 +61,12 @@ func newAdfsClient() *AdfsClient {
 
 func (ac *AdfsClient) loadSettingsFile(settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
-	checkError(err)
+	errors.CheckError(err)
 
 	cfg, err := ini.Load(b)
 	if err == nil {
 		err = cfg.Section("adfs").MapTo(ac)
-		checkError(err)
+		errors.CheckError(err)
 	}
 }
 
@@ -86,30 +88,30 @@ func (ac *AdfsClient) loadAskVars() {
 	if ac.Username == "" {
 		fmt.Printf("Username: ")
 		user, err := reader.ReadString('\n')
-		checkError(err)
+		errors.CheckError(err)
 		ac.Username = strings.Trim(user, "\n")
 	}
 	if ac.Password == "" {
 		fmt.Printf("Password: ")
 		pass, err := gopass.GetPasswd()
-		checkError(err)
+		errors.CheckError(err)
 		ac.Password = string(pass[:])
 	}
 	if ac.Hostname == "" {
 		fmt.Printf("Hostname: ")
 		host, err := reader.ReadString('\n')
-		checkError(err)
+		errors.CheckError(err)
 		ac.Hostname = strings.Trim(host, "\n")
 	}
 }
 
 func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
 	root, err := html.Parse(r)
-	checkError(err)
+	errors.CheckError(err)
 
 	inputs := scrape.FindAll(root, inputMatcher)
 	form, ok := scrape.Find(root, formMatcher)
-	checkOk(ok, "Can't find login form")
+	errors.CheckOk(ok, "Can't find login form")
 
 	formData := url.Values{}
 
@@ -133,39 +135,43 @@ func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
 
 func (ac AdfsClient) scrapeSamlResponse(r io.Reader) string {
 	root, err := html.Parse(r)
-	checkError(err)
+	errors.CheckError(err)
 
 	input, ok := scrape.Find(root, samlResponseMatcher)
-	checkOk(ok, "Can't find saml response")
+	errors.CheckOk(ok, "Can't find saml response")
 
 	return scrape.Attr(input, "value")
 }
 
-func (ac AdfsClient) login() string {
+func (ac AdfsClient) Login() string {
 	loginUrl := ac.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
 
 	cookieJar, err := cookiejar.New(nil)
-	checkError(err)
+	errors.CheckError(err)
 
 	client := &http.Client{
 		Jar: cookieJar,
 	}
 
 	req, err := http.NewRequest("GET", loginUrl, nil)
-	checkError(err)
+	errors.CheckError(err)
 
 	resp, err := client.Do(req)
-	checkError(err)
+	errors.CheckError(err)
 	defer resp.Body.Close()
 
 	action, formData := ac.scrapeLoginPage(resp.Body)
 
 	req, err = http.NewRequest("POST", action, strings.NewReader(formData.Encode()))
-	checkError(err)
+	errors.CheckError(err)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err = client.Do(req)
 	defer resp.Body.Close()
 
 	return ac.scrapeSamlResponse(resp.Body)
+}
+
+func samlResponseMatcher(n *html.Node) bool {
+	return n.DataAtom == atom.Input && scrape.Attr(n, "name") == "SAMLResponse"
 }
