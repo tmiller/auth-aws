@@ -61,12 +61,12 @@ func NewAdfsClient() *AdfsClient {
 
 func (ac *AdfsClient) loadSettingsFile(settingsFile io.Reader) {
 	b, err := ioutil.ReadAll(settingsFile)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	cfg, err := ini.Load(b)
 	if err == nil {
 		err = cfg.Section("adfs").MapTo(ac)
-		errors.CheckError(err)
+		errors.Error(err)
 	}
 }
 
@@ -88,30 +88,30 @@ func (ac *AdfsClient) loadAskVars() {
 	if ac.Username == "" {
 		fmt.Printf("Username: ")
 		user, err := reader.ReadString('\n')
-		errors.CheckError(err)
+		errors.Error(err)
 		ac.Username = strings.Trim(user, "\n")
 	}
 	if ac.Password == "" {
 		fmt.Printf("Password: ")
 		pass, err := gopass.GetPasswd()
-		errors.CheckError(err)
+		errors.Error(err)
 		ac.Password = string(pass[:])
 	}
 	if ac.Hostname == "" {
 		fmt.Printf("Hostname: ")
 		host, err := reader.ReadString('\n')
-		errors.CheckError(err)
+		errors.Error(err)
 		ac.Hostname = strings.Trim(host, "\n")
 	}
 }
 
 func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
 	root, err := html.Parse(r)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	inputs := scrape.FindAll(root, inputMatcher)
 	form, ok := scrape.Find(root, formMatcher)
-	errors.CheckOk(ok, "Can't find login form")
+	errors.Ok(ok, "Can't find login form")
 
 	formData := url.Values{}
 
@@ -135,10 +135,10 @@ func (ac AdfsClient) scrapeLoginPage(r io.Reader) (string, url.Values) {
 
 func (ac AdfsClient) scrapeSamlResponse(r io.Reader) string {
 	root, err := html.Parse(r)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	input, ok := scrape.Find(root, samlResponseMatcher)
-	errors.CheckOk(ok, "Can't find saml response")
+	errors.Ok(ok, "Can't find saml response")
 
 	return scrape.Attr(input, "value")
 }
@@ -147,23 +147,23 @@ func (ac AdfsClient) Login() string {
 	loginUrl := ac.Hostname + "/adfs/ls/IdpInitiatedSignOn.aspx?loginToRp=urn:amazon:webservices"
 
 	cookieJar, err := cookiejar.New(nil)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	client := &http.Client{
 		Jar: cookieJar,
 	}
 
 	req, err := http.NewRequest("GET", loginUrl, nil)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	resp, err := client.Do(req)
-	errors.CheckError(err)
+	errors.Error(err)
 	defer resp.Body.Close()
 
 	action, formData := ac.scrapeLoginPage(resp.Body)
 
 	req, err = http.NewRequest("POST", action, strings.NewReader(formData.Encode()))
-	errors.CheckError(err)
+	errors.Error(err)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err = client.Do(req)

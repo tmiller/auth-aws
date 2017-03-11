@@ -30,7 +30,7 @@ func main() {
 	samlAssertion := adfsClient.Login()
 
 	decodedSamlResponse, err := base64.StdEncoding.DecodeString(samlAssertion)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	saml, err := saml.Parse(decodedSamlResponse)
 
@@ -45,14 +45,14 @@ func main() {
 			}
 		}
 	}
-	errors.CheckOk(attrRoleIndex >= 0, "Could not find role attribute")
+	errors.Ok(attrRoleIndex >= 0, "Could not find role attribute")
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Select a role: ")
 	userInput, err := reader.ReadString('\n')
-	errors.CheckError(err)
+	errors.Error(err)
 	choice, err := strconv.Atoi(strings.Trim(userInput, "\n"))
-	errors.CheckError(err)
+	errors.Error(err)
 
 	chosenValues := strings.Split(saml.Attrs[attrRoleIndex].Values[choice], ",")
 	principalARN := chosenValues[0]
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	creds, err := stsClient.AssumeRoleWithSAML(&assumeRoleInput)
-	errors.CheckError(err)
+	errors.Error(err)
 
 	awsCredentials := &awscred.Credentials{
 		AwsAccessKeyId:     *creds.Credentials.AccessKeyId,
