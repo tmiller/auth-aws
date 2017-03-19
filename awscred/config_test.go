@@ -39,11 +39,42 @@ func checkContent(t *testing.T, expected string) {
 	}
 }
 
+func writeCreds(t *testing.T, c string) {
+	err := ioutil.WriteFile(credPath, []byte(c), 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestNoConfig(t *testing.T) {
 	setup(t)
 	defer teardown(t)
 
 	expected := `[adfs]
+aws_access_key_id     = key
+aws_secret_access_key = secret
+aws_session_token     = token
+
+`
+	c := Credentials{"key", "secret", "token"}
+	c.Write()
+	checkContent(t, expected)
+}
+
+func TestDefaultCredsExist(t *testing.T) {
+	setup(t)
+	defer teardown(t)
+
+	existingCreds := `[default]
+aws_access_key_id = default_key
+aws_secret_access_key = default_secret
+`
+	writeCreds(t, existingCreds)
+	expected := `[default]
+aws_access_key_id     = default_key
+aws_secret_access_key = default_secret
+
+[adfs]
 aws_access_key_id     = key
 aws_secret_access_key = secret
 aws_session_token     = token
