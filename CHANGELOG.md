@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Makefile to speed up builds.
 
+### Changed
+- Split the project up into separate packages.
+
 ##[0.0.2]
 ### Added
 - Added CHANGELOG.md.
