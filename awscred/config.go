@@ -7,7 +7,7 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-var credPath string = fmt.Sprintf("%s/.aws/credentials", os.Getenv("HOME"))
+var credPath string = fmt.Sprint(os.Getenv("HOME"), "/.aws/credentials")
 
 func (awsCredentials *Credentials) Write() {
 

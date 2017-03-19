@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Makefile to speed up builds.
 - Add test to Makefile
+- Test awscred package
 
 ### Changed
 - Split the project up into separate packages.
