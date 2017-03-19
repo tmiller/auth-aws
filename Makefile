@@ -5,7 +5,10 @@ build = GOOS=$(1) GOARCH=$(2) go build -o build/$(appname)
 
 tar = cd build && tar -czvf $(appname)_$(1)_$(2).tgz $(appname) && rm $(appname)
 
-.PHONY: all clean linux darwin
+.PHONY: all clean linux darwin test
+
+test:
+	go test ./...
 
 all: linux darwin
 

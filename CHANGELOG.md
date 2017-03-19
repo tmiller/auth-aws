@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ##[Unreleased]
 ### Added
 - Makefile to speed up builds.
+- Add test to Makefile
+
+### Changed
+- Split the project up into separate packages.
 
 ##[0.0.2]
 ### Added
