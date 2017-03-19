@@ -84,3 +84,32 @@ aws_session_token     = token
 	c.Write()
 	checkContent(t, expected)
 }
+
+func TestAdfsCredsExist(t *testing.T) {
+	setup(t)
+	defer teardown(t)
+
+	existingCreds := `[default]
+aws_access_key_id = default_key
+aws_secret_access_key = default_secret
+
+[adfs]
+aws_access_key_id     = old_key
+aws_secret_access_key = old_secret
+aws_session_token     = old_token
+`
+	writeCreds(t, existingCreds)
+	expected := `[default]
+aws_access_key_id     = default_key
+aws_secret_access_key = default_secret
+
+[adfs]
+aws_access_key_id     = key
+aws_secret_access_key = secret
+aws_session_token     = token
+
+`
+	c := Credentials{"key", "secret", "token"}
+	c.Write()
+	checkContent(t, expected)
+}
