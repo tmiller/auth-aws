@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/tmiller/auth-aws/awscred"
 	"github.com/tmiller/auth-aws/errors"
@@ -34,6 +35,10 @@ func main() {
 
 	saml, err := saml.Parse(decodedSamlResponse)
 
+	var defaultDuration int64 = 3600
+	var sessionDuration int64 = 3600
+	var sessionNotOnOrAfter time.Time
+	var sessionNotOnOrAfterDuration int64 = 3600
 	attrRoleIndex := -1
 	for ai, attrs := range saml.Attrs {
 		if attrs.Name == "https://aws.amazon.com/SAML/Attributes/Role" {
@@ -43,6 +48,26 @@ func main() {
 				role := splitVal[len(splitVal)-1]
 				fmt.Printf("[%d] %v\n", vi, role)
 			}
+		}
+		if attrs.Name == "https://aws.amazon.com/SAML/Attributes/SessionDuration" {
+			sessionDuration, err = strconv.ParseInt(saml.Attrs[ai].Values[0], 10, 64)
+			if err != nil {
+				fmt.Errorf("can't parse the SessionDuration SAML attribute")
+			}
+		}
+		if attrs.Name == "https://aws.amazon.com/SAML/Attributes/SessionNotOnOrAfter" {
+			sessionNotOnOrAfter, err = time.Parse(time.RFC3339, saml.Attrs[ai].Values[0])
+			if err != nil {
+				fmt.Errorf("can't parse the SessionNotOnOrAfter SAML attribute")
+			}
+
+			// We could do something like:
+			//
+			//     sessionNotOnOrAfterDuration = int(time.Until(sessionNotOnOrAfter).Seconds())
+			//
+			// but Seconds() returns a float64 for some reason and if we cast
+			// it to int64 there's some kind of overflow risk.
+			sessionNotOnOrAfterDuration = sessionNotOnOrAfter.Unix() - time.Now().Unix()
 		}
 	}
 	errors.Ok(attrRoleIndex >= 0, "Could not find role attribute")
@@ -58,11 +83,25 @@ func main() {
 	principalARN := chosenValues[0]
 	roleARN := chosenValues[1]
 
-	var duration int64 = 3600
+	// Choose the maximum session expiration value out of the possibilities.  We
+	// can only ask for up to 1 hour, but the SAML assertion can provide either
+	// of those, and the smallest of the two SAML attributes wins.
+	var durationSeconds int64
+	durationValues := []int64{defaultDuration, sessionDuration, sessionNotOnOrAfterDuration}
+	for _, val := range durationValues {
+		durationSeconds = val
+		for _, v := range durationValues {
+			if v < durationSeconds {
+				durationSeconds = v
+			}
+		}
+	}
+
 	awsSession := session.New(aws.NewConfig().WithRegion("us-east-1"))
 	stsClient := sts.New(awsSession)
+
 	assumeRoleInput := sts.AssumeRoleWithSAMLInput{
-		DurationSeconds: &duration,
+		DurationSeconds: &durationSeconds,
 		PrincipalArn:    &principalARN,
 		RoleArn:         &roleARN,
 		SAMLAssertion:   &samlAssertion,
